@@ -47,10 +47,8 @@ int main(int argc, char* argv[])
 	struct in_addr IpAddr;
 	PROCESSENTRY32 entry;
 
-    if (argc == 0) { return 0; };
-
-
-    loops = atoi(argv[1]);
+    if (argc == 1) { loops = 10; }
+    else { loops = atoi(argv[1]); }
     
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) {
