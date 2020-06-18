@@ -1,4 +1,4 @@
-# BDOPingUtility
+# BDO Ping Utility
 
 
 Simple tool to get bdo tcp ping due to them blocking icmp packets. 
