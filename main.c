@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
 
 	printf(" Initialised.\n ");
 	
-    //Fill in server pointer with 
+    //Fill in server pointer with retrieved info
 
 	server.sin_addr.s_addr = inet_addr(szGameServerRemoteAddr);
 	server.sin_family = AF_INET;
