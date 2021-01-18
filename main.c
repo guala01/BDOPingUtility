@@ -12,7 +12,7 @@
 #include <iphlpapi.h>
 #include <tlhelp32.h>
 
-#pragma comment(lib,"ws2_32.lib") //Winsock Library
+#pragma comment(lib,"ws2_32.lib") 
 #pragma comment(lib, "iphlpapi.lib")
 
 #define NETWORK_ERROR -1
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 {
 	LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
 	LARGE_INTEGER Frequency;
-    LARGE_INTEGER TotalPing = { 0 }, AvgPing;
+	LARGE_INTEGER TotalPing = { 0 }, AvgPing;
 	int nret, i, loops;
 	WSADATA wsa;
 	SOCKET s;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
     entry.dwSize = sizeof(PROCESSENTRY32);
 
-    //check first process
+    //Safety check
     if (!Process32First(snap, &entry)) {
         printf("Error retriving process info: %s", GetLastError());
         CloseHandle(snap);
@@ -91,7 +91,6 @@ int main(int argc, char* argv[])
     }
 
     ulSize = sizeof(MIB_TCPTABLE);
-    // First call to set the right table size
     if ((dwRetVal = GetTcpTable2(pTcpTable, &ulSize, TRUE)) == ERROR_INSUFFICIENT_BUFFER) {
         FREE(pTcpTable);
         pTcpTable = (MIB_TCPTABLE2*)MALLOC(ulSize);
@@ -100,20 +99,15 @@ int main(int argc, char* argv[])
             return 1;
         }
     }
-    // Make a second call to GetTcpTable2 to get bdo connection data
+    // Get bdo connection data
     if ((dwRetVal = GetTcpTable2(pTcpTable, &ulSize, TRUE)) == NO_ERROR) {
         for (i = 0; i < (int)pTcpTable->dwNumEntries; i++) {
-            if (pTcpTable->table[i].dwOwningPid == pid) { //Find bdo pid in the table and go tru the list 
+            if (pTcpTable->table[i].dwOwningPid == pid) {  
 
                 IpAddr.S_un.S_addr = (u_long)pTcpTable->table[i].dwLocalAddr;
                 strcpy_s(szLocalAddr, sizeof(szLocalAddr), inet_ntoa(IpAddr));
-                /*printf("\tTCP[%d] Local Addr: %s\n", i, szLocalAddr);
-                printf("\tTCP[%d] Local Port: %d \n", i, ntohs((u_short)pTcpTable->table[i].dwLocalPort));*/
                 IpAddr.S_un.S_addr = (u_long)pTcpTable->table[i].dwRemoteAddr;
                 strcpy_s(szRemoteAddr, sizeof(szRemoteAddr), inet_ntoa(IpAddr));
-                /* printf("\tTCP[%d] Remote Addr: %s\n", i, szRemoteAddr);
-                 printf("\tTCP[%d] Remote Port: %d\n", i, ntohs((u_short)pTcpTable->table[i].dwRemotePort));
-                 printf("\tTCP[%d] Owning PID: %d\n", i, pTcpTable->table[i].dwOwningPid);*/
                 if (9990 <= ntohs((u_short)pTcpTable->table[i].dwRemotePort) && ntohs((u_short)pTcpTable->table[i].dwRemotePort) <= 9996)
                 {
                     dwGameServerPort = ntohs((u_short)pTcpTable->table[i].dwRemotePort);
@@ -162,9 +156,6 @@ int main(int argc, char* argv[])
                     }
                     printf(" %s game server ip: %s at port: %d\n", target, szGameServerRemoteAddr, dwGameServerPort);
                 }
-                /*else {
-                    printf("Not game server!\n");
-                }*/
             }
         }
     }
@@ -183,7 +174,6 @@ int main(int argc, char* argv[])
 
 	printf(" Initialised.\n ");
 	
-    //Fill in server pointer with retrieved info
 
 	server.sin_addr.s_addr = inet_addr(szGameServerRemoteAddr);
 	server.sin_family = AF_INET;
@@ -198,7 +188,7 @@ int main(int argc, char* argv[])
 		{
 			printf(" Could not create socket : % d ", WSAGetLastError());
 		}
-        printf(" Socket created.\n ");
+        //printf(" Socket created.\n ");
 
 		QueryPerformanceFrequency(&Frequency);
 		QueryPerformanceCounter(&StartingTime);
