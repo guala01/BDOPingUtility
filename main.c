@@ -25,31 +25,31 @@
 
 int main(int argc, char* argv[])
 {
-	LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
-	LARGE_INTEGER Frequency;
-	LARGE_INTEGER TotalPing = { 0 }, AvgPing;
-	int nret, i, loops;
-	WSADATA wsa;
-	SOCKET s;
-	struct sockaddr_in server;
+    LARGE_INTEGER StartingTime, EndingTime, ElapsedMicroseconds;
+    LARGE_INTEGER Frequency;
+    LARGE_INTEGER TotalPing = { 0 }, AvgPing;
+    int nret, i, loops;
+    WSADATA wsa;
+    SOCKET s;
+    struct sockaddr_in server;
 
-	PMIB_TCPTABLE2 pTcpTable;
-	ULONG ulSize = 0;
-	DWORD dwRetVal = 0;
+    PMIB_TCPTABLE2 pTcpTable;
+    ULONG ulSize = 0;
+    DWORD dwRetVal = 0;
 
-	int pid = 0;
-	char* target = "BlackDesert64.exe";
+    int pid = 0;
+    char* target = "BlackDesert64.exe";
 
-	char szLocalAddr[128];
-	char szRemoteAddr[128];
-	char szGameServerRemoteAddr[128];
-	int dwGameServerPort=0;
-	struct in_addr IpAddr;
-	PROCESSENTRY32 entry;
+    char szLocalAddr[128];
+    char szRemoteAddr[128];
+    char szGameServerRemoteAddr[128];
+    int dwGameServerPort = 0;
+    struct in_addr IpAddr;
+    PROCESSENTRY32 entry;
 
     if (argc == 1) { loops = 10; }
     else { loops = atoi(argv[1]); }
-    
+
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) {
         printf("Invalid handle error: %s", GetLastError());
@@ -102,13 +102,13 @@ int main(int argc, char* argv[])
     // Get bdo connection data
     if ((dwRetVal = GetTcpTable2(pTcpTable, &ulSize, TRUE)) == NO_ERROR) {
         for (i = 0; i < (int)pTcpTable->dwNumEntries; i++) {
-            if (pTcpTable->table[i].dwOwningPid == pid) {  
+            if (pTcpTable->table[i].dwOwningPid == pid) {
 
                 IpAddr.S_un.S_addr = (u_long)pTcpTable->table[i].dwLocalAddr;
                 strcpy_s(szLocalAddr, sizeof(szLocalAddr), inet_ntoa(IpAddr));
                 IpAddr.S_un.S_addr = (u_long)pTcpTable->table[i].dwRemoteAddr;
                 strcpy_s(szRemoteAddr, sizeof(szRemoteAddr), inet_ntoa(IpAddr));
-                if (9990 <= ntohs((u_short)pTcpTable->table[i].dwRemotePort) && ntohs((u_short)pTcpTable->table[i].dwRemotePort) <= 9996)
+                if (ntohs((u_short)pTcpTable->table[i].dwRemotePort) == 8889)
                 {
                     dwGameServerPort = ntohs((u_short)pTcpTable->table[i].dwRemotePort);
                     strcpy_s(szGameServerRemoteAddr, sizeof(szRemoteAddr), szRemoteAddr);
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
                         printf("SYN-RECEIVED\n");
                         break;
                     case MIB_TCP_STATE_ESTAB:
-                        printf("ESTABLISHED");
+                        printf("ESTABLISHED\n");
                         break;
                     case MIB_TCP_STATE_FIN_WAIT1:
                         printf("FIN-WAIT-1\n");
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
                         printf("UNKNOWN dwState value\n");
                         break;
                     }
-                    printf(" %s game server ip: %s at port: %d\n", target, szGameServerRemoteAddr, dwGameServerPort);
+                    printf("%s Game Server ip: %s@%d\n", target, szGameServerRemoteAddr, dwGameServerPort);
                 }
             }
         }
@@ -165,52 +165,52 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-	printf(" \nInitialising Winsock... ");
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-	{
-		printf(" Failed.Error Code : % d ", WSAGetLastError());
-		return 1;
-	}
+    printf(" \nInitialising Winsock... ");
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+    {
+        printf(" Failed.Error Code : % d ", WSAGetLastError());
+        return 1;
+    }
 
-	printf(" Initialised.\n ");
-	
+    printf(" Initialised.\n");
 
-	server.sin_addr.s_addr = inet_addr(szGameServerRemoteAddr);
-	server.sin_family = AF_INET;
-	server.sin_port = htons(dwGameServerPort);
 
-	//Connect to bdo server and ping
+    server.sin_addr.s_addr = inet_addr(szGameServerRemoteAddr);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(dwGameServerPort);
 
-	for (int i = 0; i < loops; i++)
-	{
+    //Connect to bdo server and ping
 
-		if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-		{
-			printf(" Could not create socket : % d ", WSAGetLastError());
-		}
+    for (int i = 0; i < loops; i++)
+    {
+
+        if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+        {
+            printf(" Could not create socket : % d ", WSAGetLastError());
+        }
         //printf(" Socket created.\n ");
 
-		QueryPerformanceFrequency(&Frequency);
-		QueryPerformanceCounter(&StartingTime);
-		nret = connect(s, (struct sockaddr*)&server, sizeof(server));
-		if (nret == SOCKET_ERROR)
-		{
-			nret = WSAGetLastError();
-			printf("socket error %d", nret);
-			WSACleanup();
-			return NETWORK_ERROR;
-		}
-		QueryPerformanceCounter(&EndingTime);
-		ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
-		ElapsedMicroseconds.QuadPart *= 1000000;
-		ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
+        QueryPerformanceFrequency(&Frequency);
+        QueryPerformanceCounter(&StartingTime);
+        nret = connect(s, (struct sockaddr*)&server, sizeof(server));
+        if (nret == SOCKET_ERROR)
+        {
+            nret = WSAGetLastError();
+            printf("socket error %d", nret);
+            WSACleanup();
+            return NETWORK_ERROR;
+        }
+        QueryPerformanceCounter(&EndingTime);
+        ElapsedMicroseconds.QuadPart = EndingTime.QuadPart - StartingTime.QuadPart;
+        ElapsedMicroseconds.QuadPart *= 1000000;
+        ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
-		printf(" Connected, took: %d.%.2dms\n", ElapsedMicroseconds.QuadPart / 1000, ElapsedMicroseconds.QuadPart % 1000);
+        printf("Connected, took: %d.%.2dms\n", ElapsedMicroseconds.QuadPart / 1000, ElapsedMicroseconds.QuadPart % 1000);
         TotalPing.QuadPart = TotalPing.QuadPart + ElapsedMicroseconds.QuadPart;
-		closesocket(s);
-		Sleep(1000);
-	}
-	WSACleanup();
+        closesocket(s);
+        Sleep(1000);
+    }
+    WSACleanup();
     AvgPing.QuadPart = TotalPing.QuadPart / loops;
 
     printf("Pinged %d times, average ping of: %d.%.2dms", loops, AvgPing.QuadPart / 1000, AvgPing.QuadPart % 1000);
@@ -219,6 +219,6 @@ int main(int argc, char* argv[])
         FREE(pTcpTable);
         pTcpTable = NULL;
     }
-	getchar();
-	return 0;
+    getchar();
+    return 0;
 }
