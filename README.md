@@ -1,7 +1,8 @@
 # BDO Ping Utility
 
+C Win32API implementation of a TCP ping instead of the standard ICMP ping. Similar to tcpping utility that you can find in unix, and that Windows uses in Resource Manager->Network but does not expose under WinAPI32.
 
-Simple tool to get bdo tcp ping due to them blocking icmp packets. 
+The goal was to be used with games that block ICMP pings to their server. In this case we have it configured for BDO but can be used for any game. 
 
 # Usage
 
