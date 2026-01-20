@@ -11,6 +11,139 @@
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include <tlhelp32.h>
+#include <intrin.h>
+
+#define RTSS_SHARED_MEMORY_NAME "RTSSSharedMemoryV2"
+
+typedef struct RTSS_SHARED_MEMORY
+{
+    DWORD dwSignature;
+    DWORD dwVersion;
+
+    DWORD dwAppEntrySize;
+    DWORD dwAppArrOffset;
+    DWORD dwAppArrSize;
+
+    DWORD dwOSDEntrySize;
+    DWORD dwOSDArrOffset;
+    DWORD dwOSDArrSize;
+
+    DWORD dwOSDFrame;
+
+    LONG dwBusy;
+} RTSS_SHARED_MEMORY, *LPRTSS_SHARED_MEMORY;
+
+typedef struct RTSS_SHARED_MEMORY_OSD_ENTRY
+{
+    char szOSD[256];
+    char szOSDOwner[256];
+    char szOSDEx[4096];
+} RTSS_SHARED_MEMORY_OSD_ENTRY, *LPRTSS_SHARED_MEMORY_OSD_ENTRY;
+
+static BOOL UpdateOSD(LPCSTR lpText, LPCSTR mapName)
+{
+    BOOL bResult = FALSE;
+
+    HANDLE hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, RTSS_SHARED_MEMORY_NAME);
+
+    if (hMapFile)
+    {
+        LPVOID pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        LPRTSS_SHARED_MEMORY pMem = (LPRTSS_SHARED_MEMORY)pMapAddr;
+
+        if (pMem)
+        {
+            if ((pMem->dwSignature == 'RTSS') && (pMem->dwVersion >= 0x00020000))
+            {
+                for (DWORD dwPass = 0; dwPass < 2; dwPass++)
+                {
+                    for (DWORD dwEntry = 1; dwEntry < pMem->dwOSDArrSize; dwEntry++)
+                    {
+                        LPRTSS_SHARED_MEMORY_OSD_ENTRY pEntry = (LPRTSS_SHARED_MEMORY_OSD_ENTRY)((LPBYTE)pMem + pMem->dwOSDArrOffset + dwEntry * pMem->dwOSDEntrySize);
+
+                        if (dwPass)
+                        {
+                            if (!pEntry->szOSDOwner[0])
+                            {
+                                strncpy_s(pEntry->szOSDOwner, sizeof(pEntry->szOSDOwner), mapName, _TRUNCATE);
+                            }
+                        }
+
+                        if (!strcmp(pEntry->szOSDOwner, mapName))
+                        {
+                            if (pMem->dwVersion >= 0x00020007)
+                            {
+                                if (pMem->dwVersion >= 0x0002000e)
+                                {
+                                    LONG dwBusy = _interlockedbittestandset(&pMem->dwBusy, 0);
+
+                                    if (!dwBusy)
+                                    {
+                                        strncpy_s(pEntry->szOSDEx, sizeof(pEntry->szOSDEx), lpText, _TRUNCATE);
+                                        pMem->dwBusy = 0;
+                                    }
+                                }
+                                else
+                                {
+                                    strncpy_s(pEntry->szOSDEx, sizeof(pEntry->szOSDEx), lpText, _TRUNCATE);
+                                }
+                            }
+                            else
+                            {
+                                strncpy_s(pEntry->szOSD, sizeof(pEntry->szOSD), lpText, _TRUNCATE);
+                            }
+
+                            pMem->dwOSDFrame++;
+                            bResult = TRUE;
+                            break;
+                        }
+                    }
+
+                    if (bResult)
+                        break;
+                }
+            }
+
+            UnmapViewOfFile(pMapAddr);
+        }
+
+        CloseHandle(hMapFile);
+    }
+
+    return bResult;
+}
+
+static void ReleaseOSD(LPCSTR mapName)
+{
+    HANDLE hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, RTSS_SHARED_MEMORY_NAME);
+
+    if (hMapFile)
+    {
+        LPVOID pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        LPRTSS_SHARED_MEMORY pMem = (LPRTSS_SHARED_MEMORY)pMapAddr;
+
+        if (pMem)
+        {
+            if ((pMem->dwSignature == 'RTSS') && (pMem->dwVersion >= 0x00020000))
+            {
+                for (DWORD dwEntry = 1; dwEntry < pMem->dwOSDArrSize; dwEntry++)
+                {
+                    LPRTSS_SHARED_MEMORY_OSD_ENTRY pEntry = (LPRTSS_SHARED_MEMORY_OSD_ENTRY)((LPBYTE)pMem + pMem->dwOSDArrOffset + dwEntry * pMem->dwOSDEntrySize);
+
+                    if (!strcmp(pEntry->szOSDOwner, mapName))
+                    {
+                        SecureZeroMemory(pEntry, pMem->dwOSDEntrySize);
+                        pMem->dwOSDFrame++;
+                    }
+                }
+            }
+
+            UnmapViewOfFile(pMapAddr);
+        }
+
+        CloseHandle(hMapFile);
+    }
+}
 
 #pragma comment(lib,"ws2_32.lib") 
 #pragma comment(lib, "iphlpapi.lib")
@@ -18,6 +151,7 @@
 #define NETWORK_ERROR -1
 
 #define NETWORK_OK 0
+#define RTSS_OSD_OWNER "BDOPingUtility"
 
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
 #define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
@@ -183,6 +317,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < loops; i++)
     {
+        char osdText[128];
 
         if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
         {
@@ -206,6 +341,8 @@ int main(int argc, char* argv[])
         ElapsedMicroseconds.QuadPart /= Frequency.QuadPart;
 
         printf("Connected, took: %d.%.2dms\n", ElapsedMicroseconds.QuadPart / 1000, ElapsedMicroseconds.QuadPart % 1000);
+        snprintf(osdText, sizeof(osdText), "BDO Ping: %d.%02d ms", (int)(ElapsedMicroseconds.QuadPart / 1000), (int)(ElapsedMicroseconds.QuadPart % 1000));
+        UpdateOSD(osdText, RTSS_OSD_OWNER);
         TotalPing.QuadPart = TotalPing.QuadPart + ElapsedMicroseconds.QuadPart;
         closesocket(s);
         Sleep(1000);
@@ -214,11 +351,17 @@ int main(int argc, char* argv[])
     AvgPing.QuadPart = TotalPing.QuadPart / loops;
 
     printf("Pinged %d times, average ping of: %d.%.2dms", loops, AvgPing.QuadPart / 1000, AvgPing.QuadPart % 1000);
+    {
+        char osdText[128];
+        snprintf(osdText, sizeof(osdText), "BDO Avg Ping: %d.%02d ms", (int)(AvgPing.QuadPart / 1000), (int)(AvgPing.QuadPart % 1000));
+        UpdateOSD(osdText, RTSS_OSD_OWNER);
+    }
 
     if (pTcpTable != NULL) {
         FREE(pTcpTable);
         pTcpTable = NULL;
     }
+    ReleaseOSD(RTSS_OSD_OWNER);
     getchar();
     return 0;
 }

@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build BDO Ping Utility (MSVC x64)",
+			"type": "shell",
+			"command": "${workspaceFolder}\\build.bat",
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build BDO Ping Afterburner Plugin (Win32)",
+			"type": "shell",
+			"command": "${workspaceFolder}\\build_plugin.bat",
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		}
+	]
+}

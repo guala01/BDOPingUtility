@@ -1,0 +1,30 @@
+# Build outputs
+/AfterburnerPingPlugin/Debug/
+/AfterburnerPingPlugin/Release/
+/Debug/
+/Release/
+
+# Plugin build artifacts
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.tlog
+*.pch
+*.aps
+*.res
+
+# Executables and DLLs (publish via Releases instead)
+*.exe
+*.dll
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.sdf
+*.opensdf
+
+# Logs
+*.log
