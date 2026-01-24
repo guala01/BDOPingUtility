@@ -28,7 +28,7 @@ static char THIS_FILE[] = __FILE__;
 static AFX_EXTENSION_MODULE PingDLL = { NULL, NULL };
 //////////////////////////////////////////////////////////////////////
 HINSTANCE					g_hModule						= 0;
-BOOL						g_bEnableLog					= FALSE;
+BOOL						g_bEnableLog					= TRUE;
 char					g_szAddr[MAX_PATH]				= { 0 };
 DWORD					g_dwHeaderBgndColor				= 0;
 DWORD					g_dwHeaderTextColor				= 0;
@@ -168,7 +168,7 @@ PING_API FLOAT GetSourceData(DWORD dwIndex)
 	if (!g_pThread)
 	{
 		CString strCfgPath		= GetCfgPath();
-		g_bEnableLog = GetPrivateProfileInt("Debug", "EnableLog", 0, strCfgPath);
+		g_bEnableLog = TRUE;
 
 		g_pThread = new CPingThread("BlackDesert64.exe", 8889);
 

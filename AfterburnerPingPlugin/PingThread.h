@@ -46,6 +46,7 @@ protected:
 	DWORD		m_dwPort;
 	CString		m_strCachedAddr;
 	DWORD		m_dwCachedPort;
+	BOOL		m_bCachedIpv6;
 	HANDLE		m_hEventKill;
 	HANDLE		m_hEventAsyncPing;
 	FLOAT		m_fltPing;
@@ -62,7 +63,9 @@ protected:
 	virtual ~CPingThread();
 
 	BOOL	FindGameServerEndpoint(char* szAddr, int cchAddr, DWORD* pdwPort);
+	BOOL	FindExitLagEndpoint(char* szAddr, int cchAddr, DWORD* pdwPort, BOOL* pbIpv6);
 	BOOL	MeasureTcpPing(LPCSTR lpAddr, DWORD dwPort, FLOAT* pOutMs);
+	BOOL	MeasureTcpPing6(LPCSTR lpAddr, DWORD dwPort, FLOAT* pOutMs);
 	void	RecordPing(FLOAT fltPing);
 	FLOAT	GetSmoothedPing();
 
